@@ -1,0 +1,17 @@
+Etapes:
+    _Algo:
+        &Game_creation: 
+            - Donner le choix de la taille de grid
+            - Remplir la grille de case vides
+            - Déterminer le placement des mines
+            - Déterminer le placement des nombres en fonction du placement des mines
+        &Game_logic:
+            - Le premier clic doit être sûr 
+            - Si clic sur mine, game over
+            - Clic droit doit toggle un flag sur la case
+            - Si toutes mines trouvées, jeu gagné
+    _Visual:
+        - Créer la fenetre de jeu
+        - Créer la grid
+        - Créer le timer
+        - Créer le score tracker
