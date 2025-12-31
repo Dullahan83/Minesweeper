@@ -10,7 +10,7 @@ export const cn = (...inputs: ClassValue[]) => {
 export const initEmptyBoard = (
   ord: number,
   abs: number,
-  minesPositions: { x: number; y: number }[]
+  minesPositions?: { x: number; y: number }[]
 ) => {
   const board: GameBoard = [];
   for (let y = 0; y < ord; y++) {
@@ -18,7 +18,7 @@ export const initEmptyBoard = (
     for (let x = 0; x < abs; x++) {
       //   console.log("y + x", { y, x });
 
-      const isRigged = minesPositions.find((p) => p.x === x && p.y === y)
+      const isRigged = minesPositions?.find((p) => p.x === x && p.y === y)
         ? true
         : false;
       //   console.log("isRigged", isRigged);
@@ -26,6 +26,7 @@ export const initEmptyBoard = (
         isRigged: isRigged,
         isRevealed: false,
         isFlagged: false,
+        isPressed: false,
         neighboringMines: 0,
       });
     }
@@ -82,7 +83,8 @@ export const initGameBoard = (
     const pos = { x, y };
     if (
       !minesPositions.find((p) => p.x === x && p.y === y) &&
-      !checkInitialPosition(startPos).find((p) => p.x === x && p.y === y)
+      !checkInitialPosition(startPos).find((p) => p.x === x && p.y === y) &&
+      countAdjacentMines(minesPositions, x, y) <= 2
     ) {
       minesPositions.push(pos);
       minesPlaced++;
@@ -133,4 +135,84 @@ const checkInitialPosition = (
     safeArea.push({ x: newCol, y: newRow });
   });
   return safeArea;
+};
+
+export const propagateFromTileToTile = (
+  board: GameBoard,
+  revealedTilesCount: number,
+  row: number,
+  col: number
+) => {
+  const directions = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+  ];
+  let count = revealedTilesCount;
+  const propagate = (rows: number, cols: number) => {
+    if (
+      rows < 0 ||
+      rows >= board.length ||
+      cols < 0 ||
+      cols >= board[0].length
+    ) {
+      return;
+    }
+
+    const tile = board[rows][cols];
+
+    if (tile.isRevealed || tile.isFlagged || tile.isRigged) {
+      return;
+    }
+
+    tile.isRevealed = true;
+    count += 1;
+    if (tile.neighboringMines === 0) {
+      directions.forEach(([dy, dx]) => {
+        propagate(rows + dy, cols + dx);
+      });
+    }
+  };
+  propagate(row, col);
+  return count;
+};
+
+export const countAdjacentMines = (
+  positions: { x: number; y: number }[],
+  x: number,
+  y: number
+) => {
+  const directions = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+  ];
+  return directions.filter(([dy, dx]) =>
+    positions.some((p) => p.x === x + dx && p.y === y + dy)
+  ).length;
+};
+
+export const revealBoard = (boardState: GameBoard) => {
+  return boardState.forEach((row) =>
+    row.forEach((tile) => {
+      tile.isRevealed = true;
+    })
+  );
+};
+
+export const checkWinCondition = (minesLeft: number, boardState: GameBoard) => {
+  const unrevealedTiles = boardState
+    .flat()
+    .filter((tile) => !tile.isRevealed && !tile.isFlagged);
+  return unrevealedTiles.length === minesLeft;
 };
