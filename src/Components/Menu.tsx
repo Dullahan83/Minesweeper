@@ -42,7 +42,7 @@ const Menu = ({ title, children }: MenuProps) => {
 
   return (
     <MenuContext.Provider value={{ isOpen, openMenu, closeMenu }}>
-      <div ref={menuRef} className="relative">
+      <div ref={menuRef} className="relative" onMouseLeave={closeMenu}>
         <div
           className="cursor-pointer select-none px-2"
           onClick={() => setIsOpen(!isOpen)}

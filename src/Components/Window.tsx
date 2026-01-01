@@ -4,6 +4,7 @@ import { useTimerStore } from "../Store/useTimer";
 import GameMenu from "./GameMenu";
 import GameState from "./GameState";
 import Grid from "./Grid";
+import Help from "./Help";
 import useModal from "./Hooks/useModal";
 import { Menu } from "./Menu";
 import ModalCustomGame from "./ModalCustomGame";
@@ -42,7 +43,7 @@ const Window = () => {
         <Menu title="Game">
           <GameMenu />
         </Menu>
-        <div>Help</div>
+        <Help />
       </div>
       <div className="p-4  border-8 border-r-[#9c9c9c] border-b-[#9c9c9c] border-l-[#ffffff] border-t-[#ffffff]">
         <div className="min-h-20 h-20 w-full flex items-center justify-between px-2 border-4 border-l-[#9c9c9c] border-t-[#9c9c9c] border-r-[#ffffff] border-b-[#ffffff] ">

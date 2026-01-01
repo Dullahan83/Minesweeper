@@ -11,7 +11,8 @@ const Score = () => {
   const boardState = useGameStore((state) => state.boardState);
   const setStatus = useGameStore((state) => state.setStatus);
   const stopTimer = useTimerStore((state) => state.stopTimer);
-  const minesLeft = useGameStore((state) => state.minesLeft);
+  const flagsPlaced = useGameStore((state) => state.flagsPlaced);
+  const minesLeft = totalMines - flagsPlaced < 0 ? 0 : totalMines - flagsPlaced;
   const minesLeftStringArray = minesLeft.toString().padStart(3, "0").split("");
 
   useEffect(() => {

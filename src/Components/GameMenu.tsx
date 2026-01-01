@@ -7,6 +7,7 @@ const DifficultyLevel = ["beginner", "intermediate", "expert", "hellish"];
 
 const GameMenu = () => {
   const setGameSpecs = useGameStore((state) => state.setGameSpecs);
+  const resetBoard = useGameStore((state) => state.resetBoard);
   const { closeMenu } = useMenu();
   const { onOpen } = useModal();
   const handleCustomGame = () => {
@@ -32,6 +33,7 @@ const GameMenu = () => {
             )}
             onClick={() => {
               setGameSpecs(level as Difficulty);
+              resetBoard();
               closeMenu();
             }}
           >
