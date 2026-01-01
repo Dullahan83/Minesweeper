@@ -3,7 +3,7 @@ import useGameStore from "../Store/useGame";
 import { useTimerStore } from "../Store/useTimer";
 import GameMenu from "./GameMenu";
 import GameState from "./GameState";
-import Grid from "./Grid";
+import GridCanvas from "./GridCanvas";
 import Help from "./Help";
 import useModal from "./Hooks/useModal";
 import { Menu } from "./Menu";
@@ -52,7 +52,7 @@ const Window = () => {
           <Timer />
         </div>
         <div>
-          <Grid boardDimensions={boardDimensions} />
+          <GridCanvas />
         </div>
       </div>
       {isOpen ? <ModalCustomGame></ModalCustomGame> : null}
