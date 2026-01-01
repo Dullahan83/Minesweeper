@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import {
   initEmptyBoard,
+  placeMines,
   propagateFromTileToTile,
   revealBoard,
 } from "../Components/Utils/func";
@@ -12,12 +13,12 @@ const DifficultyLevel = {
   beginner: { rows: 9, cols: 9, totalMines: 10 },
   intermediate: { rows: 16, cols: 16, totalMines: 40 },
   expert: { rows: 16, cols: 30, totalMines: 99 },
-  hellish: { rows: 45, cols: 65, totalMines: 666 },
+  hellish: { rows: 66, cols: 100, totalMines: 666 },
   custom: { rows: 0, cols: 0, totalMines: 0 },
 };
 
 export type Difficulty = keyof typeof DifficultyLevel;
-
+export type GameStatus = "playing" | "won" | "lost" | "idle";
 type GameState = {
   gameSpecs: {
     rows: number;
@@ -28,7 +29,8 @@ type GameState = {
   boardState: GameBoard;
   minesLeft: number;
   revealedTilesCount: number;
-  status: "playing" | "won" | "lost" | "idle";
+  status: GameStatus;
+  lastTileClicked: { x: number; y: number };
   // difficultyLevel: Difficulty;
 };
 type GameActions = {
@@ -45,10 +47,13 @@ type GameActions = {
     isFlagged?: boolean,
     isRevealed?: boolean
   ) => void;
+  handleTileClick: (row: number, col: number) => void;
   handlePropagation: (row: number, col: number) => void;
   handleZoneReveal: (row: number, col: number) => void;
+  handleTips: (row: number, col: number, event: "press" | "release") => void;
   resetBoard: () => void;
   revealBoard: () => void;
+  trackLastTileClicked: (x: number, y: number) => void;
 };
 
 const useGameStore = create<GameState & GameActions>()(
@@ -60,6 +65,7 @@ const useGameStore = create<GameState & GameActions>()(
     status: "playing",
     minesLeft: 10,
     revealedTilesCount: 0,
+    lastTileClicked: { x: 0, y: 0 },
     setGameSpecs: (level, payload) =>
       set((state) => {
         if (level === "custom") {
@@ -87,9 +93,12 @@ const useGameStore = create<GameState & GameActions>()(
     setStatus: (status) => set({ status }),
     setTileState: (row, col, isFlagged, isRevealed) => {
       set((state) => {
+        if (state.status === "lost" || state.status === "won") return;
+
         const tile = state.boardState[row][col];
         if (isFlagged !== undefined) {
           if (isFlagged && !tile.isFlagged) {
+            if (state.flagsPlaced >= state.gameSpecs.totalMines) return;
             state.flagsPlaced += 1;
             if (tile.isRigged) state.minesLeft -= 1;
           }
@@ -105,8 +114,60 @@ const useGameStore = create<GameState & GameActions>()(
         }
       });
     },
+    handleTileClick: (row, col) =>
+      set((state) => {
+        if (state.status === "won" || state.status === "lost") return;
+
+        const tile = state.boardState[row]?.[col];
+        if (!tile || tile.isFlagged || tile.isRevealed) return;
+
+        // Premier clic - placer les mines dans le board EXISTANT
+        if (state.status === "idle") {
+          // ✅ Modifier le board existant au lieu de le remplacer
+          placeMines(state.boardState, state.gameSpecs.totalMines, {
+            x: col,
+            y: row,
+          });
+          state.status = "playing";
+          useTimerStore.getState().startTimer();
+        }
+
+        // Révéler la tuile (premier clic ou suivants)
+        const currentTile = state.boardState[row][col];
+
+        if (currentTile.isRigged) {
+          state.status = "lost";
+          useTimerStore.getState().stopTimer();
+          currentTile.isRevealed = true;
+          currentTile.isPressed = true;
+          revealBoard(state.boardState);
+        } else if (currentTile.neighboringMines === 0) {
+          state.revealedTilesCount = propagateFromTileToTile(
+            state.boardState,
+            state.revealedTilesCount,
+            row,
+            col
+          );
+        } else {
+          currentTile.isRevealed = true;
+          state.revealedTilesCount += 1;
+        }
+
+        state.lastTileClicked = { x: col, y: row };
+
+        // Vérifier victoire
+        const totalTiles = state.gameSpecs.rows * state.gameSpecs.cols;
+        if (
+          state.revealedTilesCount ===
+          totalTiles - state.gameSpecs.totalMines
+        ) {
+          state.status = "won";
+          useTimerStore.getState().stopTimer();
+        }
+      }),
     handlePropagation: (row, col) => {
       set((state) => {
+        if (state.status === "lost" || state.status === "won") return;
         const count = propagateFromTileToTile(
           state.boardState,
           state.revealedTilesCount,
@@ -119,6 +180,8 @@ const useGameStore = create<GameState & GameActions>()(
     handleZoneReveal: (row, col) => {
       set((state) => {
         // To be implemented: reveal neighboring tiles if flags match neighboring mines
+        if (state.status === "lost" || state.status === "won") return;
+
         const tile = state.boardState[row][col];
         if (!tile.isRevealed) return;
         const directions = [
@@ -181,26 +244,47 @@ const useGameStore = create<GameState & GameActions>()(
               }
             }
           });
-        } else {
-          directions.forEach(([dy, dx]) => {
-            const newRow = row + dy;
-            const newCol = col + dx;
-            if (
-              newRow < 0 ||
-              newRow >= state.boardState.length ||
-              newCol < 0 ||
-              newCol >= state.boardState[0].length
-            ) {
-              return;
-            }
-            const neighborTile = state.boardState[newRow][newCol];
-            if (!neighborTile.isRevealed && !neighborTile.isFlagged) {
-              neighborTile.isPressed = !neighborTile.isPressed;
-            }
-          });
         }
       });
     },
+    handleTips: (row, col, event) => {
+      set((state) => {
+        const directions = [
+          [-1, -1],
+          [-1, 0],
+          [-1, 1],
+          [0, -1],
+          [0, 1],
+          [1, -1],
+          [1, 0],
+          [1, 1],
+        ];
+        directions.forEach(([dy, dx]) => {
+          const newRow = row + dy;
+          const newCol = col + dx;
+          if (
+            newRow < 0 ||
+            newRow >= state.boardState.length ||
+            newCol < 0 ||
+            newCol >= state.boardState[0].length
+          ) {
+            return;
+          }
+          const neighborTile = state.boardState[newRow][newCol];
+          if (neighborTile.isRevealed || neighborTile.isFlagged) return;
+          if (event === "press") {
+            neighborTile.isPressed = true;
+          }
+          if (event === "release") {
+            neighborTile.isPressed = false;
+          }
+          // if (!neighborTile.isRevealed && !neighborTile.isFlagged) {
+          //   neighborTile.isPressed = !neighborTile.isPressed;
+          // }
+        });
+      });
+    },
+
     resetBoard: () =>
       set((state) => {
         state.boardState = initEmptyBoard(
@@ -216,6 +300,10 @@ const useGameStore = create<GameState & GameActions>()(
     revealBoard: () =>
       set((state) => {
         revealBoard(state.boardState);
+      }),
+    trackLastTileClicked: (x, y) =>
+      set((state) => {
+        state.lastTileClicked = { x, y };
       }),
   }))
 );
