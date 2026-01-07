@@ -39,7 +39,7 @@ const Window = () => {
   const { isOpen } = useModal();
 
   useEffect(() => {
-    console.log(gameStatus);
+    // console.log(gameStatus);
 
     // setGameSpecs("beginner");
     if (gameStatus === "playing") {
