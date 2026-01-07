@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSweeperStore } from "../Store/useSweeper";
+import useClock from "./Hooks/useClock";
 import { cn } from "./Utils/func";
 
 type StartMenuProps = {
@@ -109,13 +110,11 @@ const StartButton = ({ isMenuOpen, onClick }: StartButtonProps) => {
 };
 
 const Clock = () => {
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const { hours, minutes } = useClock();
 
   return (
     <div
-      className="h-full px-3 flex items-center bg-gradient-to-b from-[#1a8ae5] to-[#0c68b8]
+      className="h-full px-3 flex items-center bg-linear-to-b from-[#1a8ae5] to-[#0c68b8]
         border-l border-l-[#0a4a8a] shadow-[inset_1px_0_0_0_#3aa0f0]"
     >
       <span className="text-white text-sm font-medium">{`${hours}:${minutes}`}</span>
@@ -140,11 +139,11 @@ const TaskbarItem = ({
     <button
       onClick={onClick}
       className={cn(
-        "h-[28px] min-w-[140px] max-w-[200px] px-2 mx-1 flex items-center gap-2 rounded-sm cursor-pointer select-none transition-all",
+        "h-7 min-w-35 max-w-50 px-2 mx-1 flex items-center gap-2 rounded-sm cursor-pointer select-none transition-all",
         "text-white text-sm font-medium truncate",
         isActive && !isMinimized
-          ? "bg-gradient-to-b from-[#1a5a9a] to-[#2a7aca] shadow-[inset_0_0_0_1px_#0a3a6a]"
-          : "bg-gradient-to-b from-[#3c9edc] to-[#2888c8] shadow-[inset_0_1px_0_0_#5cb8ec,inset_0_-1px_0_0_#1a6898] hover:from-[#4cafec] hover:to-[#3898d8]"
+          ? "bg-linear-to-b from-[#1a5a9a] to-[#2a7aca] shadow-[inset_0_0_0_1px_#0a3a6a]"
+          : "bg-linear-to-b from-[#3c9edc] to-[#2888c8] shadow-[inset_0_1px_0_0_#5cb8ec,inset_0_-1px_0_0_#1a6898] hover:from-[#4cafec] hover:to-[#3898d8]"
       )}
     >
       <span className="text-base">💣</span>
@@ -198,7 +197,7 @@ const Taskbar = () => {
     <div
       ref={taskbarRef}
       className="fixed bottom-0 left-0 right-0 h-[36px]
-        bg-gradient-to-b from-[#245edb] via-[#3a7bea] to-[#1842a8]
+        bg-linear-to-b from-[#245edb] via-[#3a7bea] to-[#1842a8]
         shadow-[inset_0_1px_0_0_#5a9af0,0_-1px_3px_0_rgba(0,0,0,0.3)]
         flex items-center z-50"
     >
@@ -212,7 +211,7 @@ const Taskbar = () => {
       <StartButton isMenuOpen={isStartMenuOpen} onClick={toggleStartMenu} />
 
       {/* Quick Launch separator */}
-      <div className="w-[2px] h-[24px] mx-2 bg-gradient-to-b from-[#1a4a9a] to-[#3a7ada]" />
+      <div className="w-0.5 h-6 mx-2 bg-linear-to-b from-[#1a4a9a] to-[#3a7ada]" />
 
       {/* Taskbar Items */}
       <div className="flex-1 flex items-center h-full py-1">
@@ -227,7 +226,7 @@ const Taskbar = () => {
       </div>
 
       {/* System Tray separator */}
-      <div className="w-[2px] h-[24px] mx-2 bg-gradient-to-b from-[#1a4a9a] to-[#3a7ada]" />
+      <div className="w-0.5 h-6 mx-2 bg-linear-to-b from-[#1a4a9a] to-[#3a7ada]" />
 
       {/* Clock */}
       <Clock />
