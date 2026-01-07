@@ -22,8 +22,10 @@ const Window = () => {
     x: gameSpecs.cols,
     y: gameSpecs.rows,
   };
+  const gameStatus = useGameStore((state) => state.status);
   const totalMines = gameSpecs.totalMines;
   const resetTimer = useTimerStore((state) => state.resetTimer);
+  const resumeTimer = useTimerStore((state) => state.resumeTimer);
   const isSweeperOpen = useSweeperStore((s) => s.isOpen);
   const isMinimized = useSweeperStore((s) => s.isMinimized);
   const { shouldRender, animationState } = useTransition({
@@ -37,6 +39,10 @@ const Window = () => {
 
   useEffect(() => {
     // setGameSpecs("beginner");
+    if (gameStatus === "playing") {
+      resumeTimer();
+      return;
+    }
     const initialBoard = initEmptyBoard(boardDimensions.y, boardDimensions.x);
     setStatus("idle");
     resetTimer();

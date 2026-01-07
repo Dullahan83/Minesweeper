@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { directions } from "../Components/Utils/constants";
 import {
@@ -32,14 +33,12 @@ type GameState = {
   revealedTilesCount: number;
   status: GameStatus;
   lastTileClicked: { x: number; y: number };
-  // difficultyLevel: Difficulty;
 };
 type GameActions = {
   setGameSpecs: (
     level: Difficulty,
     payload?: { rows: number; cols: number; totalMines: number }
   ) => void;
-  // setFlagsPlaced: (flagsPlaced: number) => void;
   setBoardState: (boardState: GameBoard) => void;
   setStatus: (status: "playing" | "won" | "lost" | "idle") => void;
   setTileState: (
@@ -52,7 +51,6 @@ type GameActions = {
   handlePropagation: (row: number, col: number) => void;
   handleZoneReveal: (row: number, col: number) => void;
   handleTips: (row: number, col: number, event: "press" | "release") => void;
-  // showNextMine: () => void;
   findNextMine: () => { x: number; y: number } | undefined;
   setHintTile: (x: number, y: number, isPressed: boolean) => void;
   resetBoard: () => void;
@@ -61,151 +59,189 @@ type GameActions = {
 };
 
 const useGameStore = create<GameState & GameActions>()(
-  immer((set, get) => ({
-    // difficultyLevel: "hellish",
-    gameSpecs: { rows: 9, cols: 9, totalMines: 10 },
-    flagsPlaced: 0,
-    boardState: [],
-    status: "playing",
-    minesLeft: 10,
-    revealedTilesCount: 0,
-    lastTileClicked: { x: 0, y: 0 },
-    setGameSpecs: (level, payload) =>
-      set((state) => {
-        if (level === "custom") {
+  persist(
+    immer((set, get) => ({
+      gameSpecs: { rows: 9, cols: 9, totalMines: 10 },
+      flagsPlaced: 0,
+      boardState: [],
+      status: "playing",
+      minesLeft: 10,
+      revealedTilesCount: 0,
+      lastTileClicked: { x: 0, y: 0 },
+      setGameSpecs: (level, payload) =>
+        set((state) => {
+          if (level === "custom") {
+            state.gameSpecs = {
+              rows: payload?.rows ?? 0,
+              cols: payload?.cols ?? 0,
+              totalMines: payload?.totalMines ?? 0,
+            };
+            state.revealedTilesCount = 0;
+            state.minesLeft = payload?.totalMines ?? 0;
+            return;
+          }
+          const specs = DifficultyLevel[level];
+
           state.gameSpecs = {
-            rows: payload?.rows ?? 0,
-            cols: payload?.cols ?? 0,
-            totalMines: payload?.totalMines ?? 0,
+            rows: specs.rows,
+            cols: specs.cols,
+            totalMines: specs.totalMines,
           };
           state.revealedTilesCount = 0;
-          state.minesLeft = payload?.totalMines ?? 0;
-          return;
-        }
-        const specs = DifficultyLevel[level];
+          state.minesLeft = specs.totalMines;
+        }),
+      // setFlagsPlaced: (flagsPlaced) => set({ flagsPlaced }),
+      setBoardState: (boardState) => set({ boardState }),
+      setStatus: (status) => set({ status }),
+      setTileState: (row, col, isFlagged, isRevealed) => {
+        set((state) => {
+          if (state.status === "lost" || state.status === "won") return;
 
-        state.gameSpecs = {
-          rows: specs.rows,
-          cols: specs.cols,
-          totalMines: specs.totalMines,
-        };
-        state.revealedTilesCount = 0;
-        state.minesLeft = specs.totalMines;
-      }),
-    // setFlagsPlaced: (flagsPlaced) => set({ flagsPlaced }),
-    setBoardState: (boardState) => set({ boardState }),
-    setStatus: (status) => set({ status }),
-    setTileState: (row, col, isFlagged, isRevealed) => {
-      set((state) => {
-        if (state.status === "lost" || state.status === "won") return;
-
-        const tile = state.boardState[row][col];
-        if (isFlagged !== undefined) {
-          if (isFlagged && !tile.isFlagged) {
-            if (state.flagsPlaced >= state.gameSpecs.totalMines) return;
-            state.flagsPlaced += 1;
-            if (tile.isRigged) state.minesLeft -= 1;
+          const tile = state.boardState[row][col];
+          if (isFlagged !== undefined) {
+            if (isFlagged && !tile.isFlagged) {
+              if (state.flagsPlaced >= state.gameSpecs.totalMines) return;
+              state.flagsPlaced += 1;
+              if (tile.isRigged) state.minesLeft -= 1;
+            }
+            if (!isFlagged && tile.isFlagged) {
+              state.flagsPlaced -= 1;
+              if (tile.isRigged) state.minesLeft += 1;
+            }
+            tile.isFlagged = isFlagged;
           }
-          if (!isFlagged && tile.isFlagged) {
-            state.flagsPlaced -= 1;
-            if (tile.isRigged) state.minesLeft += 1;
+          if (isRevealed !== undefined) {
+            tile.isRevealed = isRevealed;
+            state.revealedTilesCount += 1;
           }
-          tile.isFlagged = isFlagged;
-        }
-        if (isRevealed !== undefined) {
-          tile.isRevealed = isRevealed;
-          state.revealedTilesCount += 1;
-        }
-      });
-    },
-    handleTileClick: (row, col) =>
-      set((state) => {
-        if (state.status === "won" || state.status === "lost") return;
+        });
+      },
+      handleTileClick: (row, col) =>
+        set((state) => {
+          if (state.status === "won" || state.status === "lost") return;
 
-        const tile = state.boardState[row]?.[col];
-        if (!tile || tile.isFlagged || tile.isRevealed) return;
+          const tile = state.boardState[row]?.[col];
+          if (!tile || tile.isFlagged || tile.isRevealed) return;
 
-        // Premier clic - placer les mines dans le board EXISTANT
-        if (state.status === "idle") {
-          // ✅ Modifier le board existant au lieu de le remplacer
-          placeMines(state.boardState, state.gameSpecs.totalMines, {
-            x: col,
-            y: row,
-          });
-          state.status = "playing";
-          useTimerStore.getState().startTimer();
-        }
+          // Premier clic - placer les mines dans le board EXISTANT
+          if (state.status === "idle") {
+            // ✅ Modifier le board existant au lieu de le remplacer
+            placeMines(state.boardState, state.gameSpecs.totalMines, {
+              x: col,
+              y: row,
+            });
+            state.status = "playing";
+            useTimerStore.getState().startTimer();
+          }
 
-        // Révéler la tuile (premier clic ou suivants)
-        const currentTile = state.boardState[row][col];
+          // Révéler la tuile (premier clic ou suivants)
+          const currentTile = state.boardState[row][col];
 
-        if (currentTile.isRigged) {
-          state.status = "lost";
-          useTimerStore.getState().stopTimer();
-          currentTile.isRevealed = true;
-          currentTile.isPressed = true;
-          revealBoard(state.boardState);
-        } else if (currentTile.neighboringMines === 0) {
-          state.revealedTilesCount = propagateFromTileToTile(
+          if (currentTile.isRigged) {
+            state.status = "lost";
+            useTimerStore.getState().stopTimer();
+            currentTile.isRevealed = true;
+            currentTile.isPressed = true;
+            revealBoard(state.boardState);
+          } else if (currentTile.neighboringMines === 0) {
+            state.revealedTilesCount = propagateFromTileToTile(
+              state.boardState,
+              state.revealedTilesCount,
+              row,
+              col
+            );
+          } else {
+            currentTile.isRevealed = true;
+            state.revealedTilesCount += 1;
+          }
+
+          state.lastTileClicked = { x: col, y: row };
+
+          // Vérifier victoire
+          const totalTiles = state.gameSpecs.rows * state.gameSpecs.cols;
+          if (
+            state.revealedTilesCount ===
+            totalTiles - state.gameSpecs.totalMines
+          ) {
+            state.status = "won";
+            useTimerStore.getState().stopTimer();
+          }
+        }),
+      handlePropagation: (row, col) => {
+        set((state) => {
+          if (state.status === "lost" || state.status === "won") return;
+          const count = propagateFromTileToTile(
             state.boardState,
             state.revealedTilesCount,
             row,
             col
           );
-        } else {
-          currentTile.isRevealed = true;
-          state.revealedTilesCount += 1;
-        }
+          state.revealedTilesCount = count;
+        });
+      },
+      handleZoneReveal: (row, col) => {
+        set((state) => {
+          // To be implemented: reveal neighboring tiles if flags match neighboring mines
+          if (state.status === "lost" || state.status === "won") return;
 
-        state.lastTileClicked = { x: col, y: row };
+          const tile = state.boardState[row][col];
+          if (!tile.isRevealed) return;
 
-        // Vérifier victoire
-        const totalTiles = state.gameSpecs.rows * state.gameSpecs.cols;
-        if (
-          state.revealedTilesCount ===
-          totalTiles - state.gameSpecs.totalMines
-        ) {
-          state.status = "won";
-          useTimerStore.getState().stopTimer();
-        }
-      }),
-    handlePropagation: (row, col) => {
-      set((state) => {
-        if (state.status === "lost" || state.status === "won") return;
-        const count = propagateFromTileToTile(
-          state.boardState,
-          state.revealedTilesCount,
-          row,
-          col
-        );
-        state.revealedTilesCount = count;
-      });
-    },
-    handleZoneReveal: (row, col) => {
-      set((state) => {
-        // To be implemented: reveal neighboring tiles if flags match neighboring mines
-        if (state.status === "lost" || state.status === "won") return;
-
-        const tile = state.boardState[row][col];
-        if (!tile.isRevealed) return;
-
-        let flaggedCount = 0;
-        directions.forEach(([dy, dx]) => {
-          const newRow = row + dy;
-          const newCol = col + dx;
-          if (
-            newRow < 0 ||
-            newRow >= state.boardState.length ||
-            newCol < 0 ||
-            newCol >= state.boardState[0].length
-          ) {
-            return;
-          }
-          if (state.boardState[newRow][newCol].isFlagged) {
-            flaggedCount++;
+          let flaggedCount = 0;
+          directions.forEach(([dy, dx]) => {
+            const newRow = row + dy;
+            const newCol = col + dx;
+            if (
+              newRow < 0 ||
+              newRow >= state.boardState.length ||
+              newCol < 0 ||
+              newCol >= state.boardState[0].length
+            ) {
+              return;
+            }
+            if (state.boardState[newRow][newCol].isFlagged) {
+              flaggedCount++;
+            }
+          });
+          if (flaggedCount === tile.neighboringMines) {
+            directions.forEach(([dy, dx]) => {
+              const newRow = row + dy;
+              const newCol = col + dx;
+              if (
+                newRow < 0 ||
+                newRow >= state.boardState.length ||
+                newCol < 0 ||
+                newCol >= state.boardState[0].length
+              ) {
+                return;
+              }
+              const neighborTile = state.boardState[newRow][newCol];
+              if (!neighborTile.isRevealed && !neighborTile.isFlagged) {
+                if (neighborTile.isRigged) {
+                  state.status = "lost";
+                  useTimerStore.getState().stopTimer();
+                  neighborTile.isRevealed = true;
+                  neighborTile.isPressed = true;
+                  revealBoard(state.boardState);
+                } else if (neighborTile.neighboringMines === 0) {
+                  const count = propagateFromTileToTile(
+                    state.boardState,
+                    state.revealedTilesCount,
+                    newRow,
+                    newCol
+                  );
+                  state.revealedTilesCount = count;
+                } else {
+                  neighborTile.isRevealed = true;
+                  state.revealedTilesCount += 1;
+                }
+              }
+            });
           }
         });
-        if (flaggedCount === tile.neighboringMines) {
+      },
+      handleTips: (row, col, event) => {
+        set((state) => {
           directions.forEach(([dy, dx]) => {
             const newRow = row + dy;
             const newCol = col + dx;
@@ -218,171 +254,87 @@ const useGameStore = create<GameState & GameActions>()(
               return;
             }
             const neighborTile = state.boardState[newRow][newCol];
-            if (!neighborTile.isRevealed && !neighborTile.isFlagged) {
-              if (neighborTile.isRigged) {
-                state.status = "lost";
-                useTimerStore.getState().stopTimer();
-                neighborTile.isRevealed = true;
-                neighborTile.isPressed = true;
-                revealBoard(state.boardState);
-              } else if (neighborTile.neighboringMines === 0) {
-                const count = propagateFromTileToTile(
-                  state.boardState,
-                  state.revealedTilesCount,
-                  newRow,
-                  newCol
-                );
-                state.revealedTilesCount = count;
-              } else {
-                neighborTile.isRevealed = true;
-                state.revealedTilesCount += 1;
-              }
+            if (neighborTile.isRevealed || neighborTile.isFlagged) return;
+            if (event === "press") {
+              neighborTile.isPressed = true;
+            }
+            if (event === "release") {
+              neighborTile.isPressed = false;
             }
           });
-        }
-      });
-    },
-    handleTips: (row, col, event) => {
-      set((state) => {
-        directions.forEach(([dy, dx]) => {
-          const newRow = row + dy;
-          const newCol = col + dx;
-          if (
-            newRow < 0 ||
-            newRow >= state.boardState.length ||
-            newCol < 0 ||
-            newCol >= state.boardState[0].length
-          ) {
-            return;
-          }
-          const neighborTile = state.boardState[newRow][newCol];
-          if (neighborTile.isRevealed || neighborTile.isFlagged) return;
-          if (event === "press") {
-            neighborTile.isPressed = true;
-          }
-          if (event === "release") {
-            neighborTile.isPressed = false;
-          }
         });
-      });
-    },
-    // showNextMine: () =>
-    //   set((state) => {
-    //     // Find a tile that is not revealed, not flagged, close to a revealed one and rigged
-    //     if (
-    //       state.status === "lost" ||
-    //       state.status === "won" ||
-    //       state.status === "idle"
-    //     )
-    //       return;
-    //     const candidates: { x: number; y: number }[] = [];
-    //     for (let y = 0; y < state.boardState.length; y++) {
-    //       for (let x = 0; x < state.boardState[0].length; x++) {
-    //         const tile = state.boardState[y][x];
-    //         if (
-    //           (tile.neighboringMines === 0 && tile.isRevealed) ||
-    //           !tile.isRevealed
-    //         )
-    //           continue;
-    //         directions.forEach(([dy, dx]) => {
-    //           const newRow = y + dy;
-    //           const newCol = x + dx;
-    //           if (
-    //             newRow < 0 ||
-    //             newRow >= state.boardState.length ||
-    //             newCol < 0 ||
-    //             newCol >= state.boardState[0].length
-    //           ) {
-    //             return;
-    //           }
-    //           const neighborTile = state.boardState[newRow][newCol];
-    //           if (
-    //             !neighborTile.isRevealed &&
-    //             !neighborTile.isFlagged &&
-    //             neighborTile.isRigged
-    //           ) {
-    //             candidates.push({ x: newCol, y: newRow });
-    //           }
-    //         });
-    //       }
-    //     }
-    //     if (candidates.length === 0) return;
-    //     const hintTile =
-    //       candidates[Math.floor(Math.random() * candidates.length)];
-    //     const tile = state.boardState[hintTile.y][hintTile.x];
-    //     tile.isPressed = true;
-    //     const timeoutId = setTimeout(() => {
-    //       set((state) => {
-    //         const tile = state.boardState[hintTile.y][hintTile.x];
-    //         tile.isPressed = false;
-    //       });
-    //     }, 1000);
-    //   }),
-    findNextMine: () => {
-      const state = get();
-      if (state.status !== "playing") return;
-      const candidates: { x: number; y: number }[] = [];
-      for (let y = 0; y < state.boardState.length; y++) {
-        for (let x = 0; x < state.boardState[0].length; x++) {
-          const tile = state.boardState[y][x];
-          if (
-            (tile.neighboringMines === 0 && tile.isRevealed) ||
-            !tile.isRevealed
-          )
-            continue;
-          directions.forEach(([dy, dx]) => {
-            const newRow = y + dy;
-            const newCol = x + dx;
+      },
+
+      findNextMine: () => {
+        const state = get();
+        if (state.status !== "playing") return;
+        const candidates: { x: number; y: number }[] = [];
+        for (let y = 0; y < state.boardState.length; y++) {
+          for (let x = 0; x < state.boardState[0].length; x++) {
+            const tile = state.boardState[y][x];
             if (
-              newRow < 0 ||
-              newRow >= state.boardState.length ||
-              newCol < 0 ||
-              newCol >= state.boardState[0].length
-            ) {
-              return;
-            }
-            const neighborTile = state.boardState[newRow][newCol];
-            if (
-              !neighborTile.isRevealed &&
-              !neighborTile.isFlagged &&
-              neighborTile.isRigged
-            ) {
-              candidates.push({ x: newCol, y: newRow });
-            }
-          });
+              (tile.neighboringMines === 0 && tile.isRevealed) ||
+              !tile.isRevealed
+            )
+              continue;
+            directions.forEach(([dy, dx]) => {
+              const newRow = y + dy;
+              const newCol = x + dx;
+              if (
+                newRow < 0 ||
+                newRow >= state.boardState.length ||
+                newCol < 0 ||
+                newCol >= state.boardState[0].length
+              ) {
+                return;
+              }
+              const neighborTile = state.boardState[newRow][newCol];
+              if (
+                !neighborTile.isRevealed &&
+                !neighborTile.isFlagged &&
+                neighborTile.isRigged
+              ) {
+                candidates.push({ x: newCol, y: newRow });
+              }
+            });
+          }
         }
-      }
-      if (candidates.length === 0) return;
-      const hintTile =
-        candidates[Math.floor(Math.random() * candidates.length)];
-      return hintTile;
-    },
-    setHintTile: (x, y, isPressed) =>
-      set((state) => {
-        const tile = state.boardState[y][x];
-        tile.isPressed = isPressed;
-      }),
-    resetBoard: () =>
-      set((state) => {
-        state.boardState = initEmptyBoard(
-          state.gameSpecs.rows,
-          state.gameSpecs.cols
-        );
-        state.flagsPlaced = 0;
-        state.status = "idle";
-        state.minesLeft = state.gameSpecs.totalMines;
-        state.revealedTilesCount = 0;
-        useTimerStore.getState().resetTimer();
-      }),
-    revealBoard: () =>
-      set((state) => {
-        revealBoard(state.boardState);
-      }),
-    trackLastTileClicked: (x, y) =>
-      set((state) => {
-        state.lastTileClicked = { x, y };
-      }),
-  }))
+        if (candidates.length === 0) return;
+        const hintTile =
+          candidates[Math.floor(Math.random() * candidates.length)];
+        return hintTile;
+      },
+      setHintTile: (x, y, isPressed) =>
+        set((state) => {
+          const tile = state.boardState[y][x];
+          tile.isPressed = isPressed;
+        }),
+      resetBoard: () =>
+        set((state) => {
+          state.boardState = initEmptyBoard(
+            state.gameSpecs.rows,
+            state.gameSpecs.cols
+          );
+          state.flagsPlaced = 0;
+          state.status = "idle";
+          state.minesLeft = state.gameSpecs.totalMines;
+          state.revealedTilesCount = 0;
+          useTimerStore.getState().resetTimer();
+        }),
+      revealBoard: () =>
+        set((state) => {
+          revealBoard(state.boardState);
+        }),
+      trackLastTileClicked: (x, y) =>
+        set((state) => {
+          state.lastTileClicked = { x, y };
+        }),
+    })),
+    {
+      name: "sweeper-game-storage",
+      storage: createJSONStorage(() => sessionStorage),
+    }
+  )
 );
 
 export default useGameStore;

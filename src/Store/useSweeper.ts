@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import useGameStore from "./useGame";
 type SweeperState = {
@@ -14,27 +15,33 @@ type SweeperActions = {
 };
 
 export const useSweeperStore = create<SweeperState & SweeperActions>()(
-  immer((set) => ({
-    isOpen: true,
-    isMinimized: false,
-    openWindow: () =>
-      set((state) => {
-        state.isOpen = true;
-        state.isMinimized = false;
-        useGameStore.getState().resetBoard();
-      }),
-    closeWindow: () =>
-      set((state) => {
-        state.isOpen = false;
-        state.isMinimized = false;
-      }),
-    minimizeWindow: () =>
-      set((state) => {
-        state.isMinimized = true;
-      }),
-    restoreWindow: () =>
-      set((state) => {
-        state.isMinimized = false;
-      }),
-  }))
+  persist(
+    immer((set) => ({
+      isOpen: true,
+      isMinimized: false,
+      openWindow: () =>
+        set((state) => {
+          state.isOpen = true;
+          state.isMinimized = false;
+          useGameStore.getState().resetBoard();
+        }),
+      closeWindow: () =>
+        set((state) => {
+          state.isOpen = false;
+          state.isMinimized = false;
+        }),
+      minimizeWindow: () =>
+        set((state) => {
+          state.isMinimized = true;
+        }),
+      restoreWindow: () =>
+        set((state) => {
+          state.isMinimized = false;
+        }),
+    })),
+    {
+      name: "sweeper-window-storage",
+      storage: createJSONStorage(() => sessionStorage),
+    }
+  )
 );
