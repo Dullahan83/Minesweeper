@@ -1,17 +1,19 @@
 import { useEffect } from "react";
 import useGameStore from "../Store/useGame";
+import { useSweeperStore } from "../Store/useSweeper";
 import { useTimerStore } from "../Store/useTimer";
 import GameMenu from "./GameMenu";
 import GameState from "./GameState";
 import Grid from "./Grid";
 import Help from "./Help";
 import useModal from "./Hooks/useModal";
+import useTransition from "./Hooks/useTransition";
 import { Menu } from "./Menu";
 import ModalCustomGame from "./ModalCustomGame";
 import Rules from "./Rules";
 import Score from "./Score";
 import Timer from "./Timer";
-import { initEmptyBoard } from "./Utils/func";
+import { cn, initEmptyBoard } from "./Utils/func";
 import WindowTop from "./WindowTop";
 
 const Window = () => {
@@ -22,6 +24,12 @@ const Window = () => {
   };
   const totalMines = gameSpecs.totalMines;
   const resetTimer = useTimerStore((state) => state.resetTimer);
+  const isSweeperOpen = useSweeperStore((s) => s.isOpen);
+  const isMinimized = useSweeperStore((s) => s.isMinimized);
+  const { shouldRender, animationState } = useTransition({
+    isOpen: isSweeperOpen,
+    isMinimized,
+  });
 
   const setBoardStateFromStore = useGameStore((state) => state.setBoardState);
   const setStatus = useGameStore((state) => state.setStatus);
@@ -35,8 +43,22 @@ const Window = () => {
     setBoardStateFromStore(initialBoard);
   }, [boardDimensions, totalMines, setBoardStateFromStore]);
 
+  if (!shouldRender) {
+    return null;
+  }
+
   return (
-    <div className=" flex flex-col  bg-gray-300  border-3 border-t border-[#0059fe] relative rounded-t-xl">
+    <div
+      className={cn(
+        " flex flex-col  bg-gray-300  border-3 border-t border-[#0059fe] relative rounded-t-xl transition-all duration-300",
+        {
+          "opacity-100 scale-100": animationState === "open",
+          "opacity-0 scale-75 translate-y-[100vh]":
+            animationState === "minimized",
+          "opacity-0 scale-95": animationState === "closed",
+        }
+      )}
+    >
       <WindowTop />
       <div className="flex gap-4 bg-gray-100 ">
         <Menu title="Game">

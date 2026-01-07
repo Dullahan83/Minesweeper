@@ -1,6 +1,9 @@
+import { useSweeperStore } from "../Store/useSweeper";
 import WindowButtons from "./WindowButtons";
 
 const WindowTop = () => {
+  const minimizeSweeper = useSweeperStore((s) => s.minimizeWindow);
+  const closeSweeper = useSweeperStore((s) => s.closeWindow);
   return (
     <div className="w-full h-12 rounded-t-xl bg-linear-to-b from-[#0a7aff] to-[#0055ee] shadow-[inset_0_4px_3px_0_#ffffff60,inset_0_-5px_5px_0_#00000030] flex items-center justify-between px-2">
       {/* <div className="w-full h-1/4 bg-[#ffffff4a]"></div> */}
@@ -9,7 +12,11 @@ const WindowTop = () => {
           Minesweeper
         </h1>
       </div>
-      <WindowButtons disableMaximize={true} />
+      <WindowButtons
+        disableMaximize={true}
+        onMinimize={minimizeSweeper}
+        onClose={closeSweeper}
+      />
     </div>
   );
 };

@@ -12,7 +12,7 @@ const Rules = () => {
   return (
     <>
       <div
-        className="cursor-pointer select-none px-2 hover:underline"
+        className="cursor-pointer select-none px-2 hover:underline hover:underline-offset-2"
         onClick={() => setIsOpen(true)}
       >
         Rules
