@@ -8,9 +8,11 @@ import Help from "./Help";
 import useModal from "./Hooks/useModal";
 import { Menu } from "./Menu";
 import ModalCustomGame from "./ModalCustomGame";
+import Rules from "./Rules";
 import Score from "./Score";
 import Timer from "./Timer";
 import { initEmptyBoard } from "./Utils/func";
+import WindowTop from "./WindowTop";
 
 const Window = () => {
   const gameSpecs = useGameStore((state) => state.gameSpecs);
@@ -27,23 +29,21 @@ const Window = () => {
 
   useEffect(() => {
     // setGameSpecs("beginner");
-    const initialBoard = initEmptyBoard(
-      boardDimensions.y,
-      boardDimensions.x,
-      []
-    );
+    const initialBoard = initEmptyBoard(boardDimensions.y, boardDimensions.x);
     setStatus("idle");
     resetTimer();
     setBoardStateFromStore(initialBoard);
   }, [boardDimensions, totalMines, setBoardStateFromStore]);
 
   return (
-    <div className=" flex flex-col  bg-gray-300 border border-t-34 rounded-t border-[#000080] relative">
+    <div className=" flex flex-col  bg-gray-300  border-3 border-t border-[#0059fe] relative rounded-t-xl">
+      <WindowTop />
       <div className="flex gap-4 bg-gray-100 ">
         <Menu title="Game">
           <GameMenu />
         </Menu>
         <Help />
+        <Rules />
       </div>
       <div className="p-4  border-8 border-r-[#9c9c9c] border-b-[#9c9c9c] border-l-[#ffffff] border-t-[#ffffff]">
         <div className="min-h-20 h-20 w-full flex items-center justify-between px-2 border-4 border-l-[#9c9c9c] border-t-[#9c9c9c] border-r-[#ffffff] border-b-[#ffffff] ">
