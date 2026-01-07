@@ -1,10 +1,12 @@
 import useGameStore from "../Store/useGame";
 
+const base = import.meta.env.BASE_URL;
+
 const imgSource = {
-  idle: "/Default.webp",
-  playing: "/Default.webp",
-  won: "/Won.png",
-  lost: "/Lose.jpg",
+  idle: `${base}Default.webp`,
+  playing: `${base}Default.webp`,
+  won: `${base}Won.png`,
+  lost: `${base}Lose.jpg`,
 };
 
 type sourceEnumm = keyof typeof imgSource;

@@ -20,7 +20,7 @@ const GameMenu = () => {
   };
 
   return (
-    <div className="pl-6  z-10  absolute bg-gray-100 border border-gray-200 shadow-md">
+    <div className="pl-6  z-10  absolute bg-gray-100 border border-gray-200 shadow-md hover:underline hover:underline-offset-2">
       <ul className="flex flex-col  top-full text-sm">
         {DifficultyLevel.map((level, index) => (
           <li

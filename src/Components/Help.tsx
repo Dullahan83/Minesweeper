@@ -24,7 +24,14 @@ const Help = () => {
     };
   };
 
-  return <div onClick={showNextMine}>Help</div>;
+  return (
+    <div
+      onClick={showNextMine}
+      className="hover:cursor-pointer hover:underline hover:underline-offset-2"
+    >
+      Help
+    </div>
+  );
 };
 
 export default Help;
