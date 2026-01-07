@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-
+import useGameStore from "./useGame";
 type SweeperState = {
   isOpen: boolean;
   isMinimized: boolean;
@@ -21,11 +21,11 @@ export const useSweeperStore = create<SweeperState & SweeperActions>()(
       set((state) => {
         state.isOpen = true;
         state.isMinimized = false;
+        useGameStore.getState().resetBoard();
       }),
     closeWindow: () =>
       set((state) => {
         state.isOpen = false;
-
         state.isMinimized = false;
       }),
     minimizeWindow: () =>
