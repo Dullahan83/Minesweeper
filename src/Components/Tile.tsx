@@ -19,7 +19,6 @@ const colorsMap: { [key: number]: string } = {
 
 const Tile = React.memo((props: TileProps) => {
   const { row: y, col: x } = props;
-  const tileData = useGameStore((state) => state.boardState?.[y]?.[x]);
 
   // const gameSpecs = useGameStore((state) => state.gameSpecs);
   // const flagsPlaced = useGameStore((state) => state.flagsPlaced);
@@ -50,7 +49,7 @@ const Tile = React.memo((props: TileProps) => {
   // const status = useGameStore((state) => state.status);
   // const flagsPlaced = useGameStore((state) => state.flagsPlaced);
 
-  console.log("je suis rendu", x, y, tileData);
+  // console.log("je suis rendu", x, y, tileData);
 
   const handleTileClick = useGameStore((state) => state.handleTileClick);
   const setTileState = useGameStore((state) => state.setTileState);
