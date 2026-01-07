@@ -42,7 +42,6 @@ export const useTimerStore = create<TimerState & TimerActions>()(
           if (state.intervalId) {
             clearInterval(state.intervalId);
             state.intervalId = null;
-            state.timeStamp = 0;
           }
         }),
       resetTimer: () =>
