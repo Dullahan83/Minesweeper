@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { directions } from "../Components/Utils/constants";
 import {
   initEmptyBoard,
   placeMines,
@@ -51,13 +52,16 @@ type GameActions = {
   handlePropagation: (row: number, col: number) => void;
   handleZoneReveal: (row: number, col: number) => void;
   handleTips: (row: number, col: number, event: "press" | "release") => void;
+  // showNextMine: () => void;
+  findNextMine: () => { x: number; y: number } | undefined;
+  setHintTile: (x: number, y: number, isPressed: boolean) => void;
   resetBoard: () => void;
   revealBoard: () => void;
   trackLastTileClicked: (x: number, y: number) => void;
 };
 
 const useGameStore = create<GameState & GameActions>()(
-  immer((set) => ({
+  immer((set, get) => ({
     // difficultyLevel: "hellish",
     gameSpecs: { rows: 9, cols: 9, totalMines: 10 },
     flagsPlaced: 0,
@@ -184,16 +188,7 @@ const useGameStore = create<GameState & GameActions>()(
 
         const tile = state.boardState[row][col];
         if (!tile.isRevealed) return;
-        const directions = [
-          [-1, -1],
-          [-1, 0],
-          [-1, 1],
-          [0, -1],
-          [0, 1],
-          [1, -1],
-          [1, 0],
-          [1, 1],
-        ];
+
         let flaggedCount = 0;
         directions.forEach(([dy, dx]) => {
           const newRow = row + dy;
@@ -249,16 +244,6 @@ const useGameStore = create<GameState & GameActions>()(
     },
     handleTips: (row, col, event) => {
       set((state) => {
-        const directions = [
-          [-1, -1],
-          [-1, 0],
-          [-1, 1],
-          [0, -1],
-          [0, 1],
-          [1, -1],
-          [1, 0],
-          [1, 1],
-        ];
         directions.forEach(([dy, dx]) => {
           const newRow = row + dy;
           const newCol = col + dx;
@@ -278,13 +263,105 @@ const useGameStore = create<GameState & GameActions>()(
           if (event === "release") {
             neighborTile.isPressed = false;
           }
-          // if (!neighborTile.isRevealed && !neighborTile.isFlagged) {
-          //   neighborTile.isPressed = !neighborTile.isPressed;
-          // }
         });
       });
     },
-
+    // showNextMine: () =>
+    //   set((state) => {
+    //     // Find a tile that is not revealed, not flagged, close to a revealed one and rigged
+    //     if (
+    //       state.status === "lost" ||
+    //       state.status === "won" ||
+    //       state.status === "idle"
+    //     )
+    //       return;
+    //     const candidates: { x: number; y: number }[] = [];
+    //     for (let y = 0; y < state.boardState.length; y++) {
+    //       for (let x = 0; x < state.boardState[0].length; x++) {
+    //         const tile = state.boardState[y][x];
+    //         if (
+    //           (tile.neighboringMines === 0 && tile.isRevealed) ||
+    //           !tile.isRevealed
+    //         )
+    //           continue;
+    //         directions.forEach(([dy, dx]) => {
+    //           const newRow = y + dy;
+    //           const newCol = x + dx;
+    //           if (
+    //             newRow < 0 ||
+    //             newRow >= state.boardState.length ||
+    //             newCol < 0 ||
+    //             newCol >= state.boardState[0].length
+    //           ) {
+    //             return;
+    //           }
+    //           const neighborTile = state.boardState[newRow][newCol];
+    //           if (
+    //             !neighborTile.isRevealed &&
+    //             !neighborTile.isFlagged &&
+    //             neighborTile.isRigged
+    //           ) {
+    //             candidates.push({ x: newCol, y: newRow });
+    //           }
+    //         });
+    //       }
+    //     }
+    //     if (candidates.length === 0) return;
+    //     const hintTile =
+    //       candidates[Math.floor(Math.random() * candidates.length)];
+    //     const tile = state.boardState[hintTile.y][hintTile.x];
+    //     tile.isPressed = true;
+    //     const timeoutId = setTimeout(() => {
+    //       set((state) => {
+    //         const tile = state.boardState[hintTile.y][hintTile.x];
+    //         tile.isPressed = false;
+    //       });
+    //     }, 1000);
+    //   }),
+    findNextMine: () => {
+      const state = get();
+      if (state.status !== "playing") return;
+      const candidates: { x: number; y: number }[] = [];
+      for (let y = 0; y < state.boardState.length; y++) {
+        for (let x = 0; x < state.boardState[0].length; x++) {
+          const tile = state.boardState[y][x];
+          if (
+            (tile.neighboringMines === 0 && tile.isRevealed) ||
+            !tile.isRevealed
+          )
+            continue;
+          directions.forEach(([dy, dx]) => {
+            const newRow = y + dy;
+            const newCol = x + dx;
+            if (
+              newRow < 0 ||
+              newRow >= state.boardState.length ||
+              newCol < 0 ||
+              newCol >= state.boardState[0].length
+            ) {
+              return;
+            }
+            const neighborTile = state.boardState[newRow][newCol];
+            if (
+              !neighborTile.isRevealed &&
+              !neighborTile.isFlagged &&
+              neighborTile.isRigged
+            ) {
+              candidates.push({ x: newCol, y: newRow });
+            }
+          });
+        }
+      }
+      if (candidates.length === 0) return;
+      const hintTile =
+        candidates[Math.floor(Math.random() * candidates.length)];
+      return hintTile;
+    },
+    setHintTile: (x, y, isPressed) =>
+      set((state) => {
+        const tile = state.boardState[y][x];
+        tile.isPressed = isPressed;
+      }),
     resetBoard: () =>
       set((state) => {
         state.boardState = initEmptyBoard(

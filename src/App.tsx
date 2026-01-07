@@ -4,7 +4,7 @@ import Window from "./Components/Window";
 
 function App() {
   return (
-    <div className="justify-center items-center flex h-full min-h-screen bg-gray-200">
+    <div className="justify-center items-center flex h-full min-h-screen">
       <ModalProvider>
         <Window />
       </ModalProvider>
