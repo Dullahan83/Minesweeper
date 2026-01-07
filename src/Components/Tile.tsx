@@ -55,33 +55,10 @@ const Tile = React.memo((props: TileProps) => {
   const setTileState = useGameStore((state) => state.setTileState);
   const handleZoneReveal = useGameStore((state) => state.handleZoneReveal);
   const handleTips = useGameStore((state) => state.handleTips);
-  // const {
-  //   setBoardState,
-  //   setTileState,
-  //   handlePropagation,
-  //   setStatus,
-  //   handleZoneReveal,
-  //   revealBoard,
-  //   handleTips,
-  //   trackTileClick,
-  // } = useGameStore(
-  //   useShallow((state) => ({
-  //     setBoardState: state.setBoardState,
-  //     setTileState: state.setTileState,
-  //     handlePropagation: state.handlePropagation,
-  //     setStatus: state.setStatus,
-  //     handleZoneReveal: state.handleZoneReveal,
-  //     revealBoard: state.revealBoard,
-  //     handleTips: state.handleTips,
-  //     trackTileClick: state.trackLastTileClicked,
-  //   }))
-  // );
+
   const isLastTimeClicked = useGameStore(
     (state) => state.lastTileClicked.x === x && state.lastTileClicked.y === y
   );
-
-  // const isRevealed = isRevealed || false;
-  // const isFlagged = isFlagged || false;
 
   const handleLeftClick = () => {
     // console.log("tile data", tileData);

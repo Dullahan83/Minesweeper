@@ -13,7 +13,7 @@ import ModalCustomGame from "./ModalCustomGame";
 import Rules from "./Rules";
 import Score from "./Score";
 import Timer from "./Timer";
-import { cn, initEmptyBoard } from "./Utils/func";
+import { cn } from "./Utils/func";
 import WindowTop from "./WindowTop";
 
 const Window = () => {
@@ -22,9 +22,10 @@ const Window = () => {
     x: gameSpecs.cols,
     y: gameSpecs.rows,
   };
+  const resetBoard = useGameStore((state) => state.resetBoard);
   const gameStatus = useGameStore((state) => state.status);
   const totalMines = gameSpecs.totalMines;
-  const resetTimer = useTimerStore((state) => state.resetTimer);
+  // const resetTimer = useTimerStore((state) => state.resetTimer);
   const resumeTimer = useTimerStore((state) => state.resumeTimer);
   const isSweeperOpen = useSweeperStore((s) => s.isOpen);
   const isMinimized = useSweeperStore((s) => s.isMinimized);
@@ -34,19 +35,21 @@ const Window = () => {
   });
 
   const setBoardStateFromStore = useGameStore((state) => state.setBoardState);
-  const setStatus = useGameStore((state) => state.setStatus);
+  // const setStatus = useGameStore((state) => state.setStatus);
   const { isOpen } = useModal();
 
   useEffect(() => {
+    console.log(gameStatus);
+
     // setGameSpecs("beginner");
     if (gameStatus === "playing") {
       resumeTimer();
       return;
     }
-    const initialBoard = initEmptyBoard(boardDimensions.y, boardDimensions.x);
-    setStatus("idle");
-    resetTimer();
-    setBoardStateFromStore(initialBoard);
+    if (gameStatus === "won" || gameStatus === "lost") {
+      return;
+    }
+    resetBoard();
   }, [boardDimensions, totalMines, setBoardStateFromStore]);
 
   if (!shouldRender) {
