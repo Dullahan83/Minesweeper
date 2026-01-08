@@ -64,7 +64,7 @@ const useGameStore = create<GameState & GameActions>()(
       gameSpecs: { rows: 9, cols: 9, totalMines: 10 },
       flagsPlaced: 0,
       boardState: [],
-      status: "playing",
+      status: "idle",
       minesLeft: 10,
       revealedTilesCount: 0,
       lastTileClicked: { x: 0, y: 0 },
